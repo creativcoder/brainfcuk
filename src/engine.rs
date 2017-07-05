@@ -4,6 +4,13 @@ use std::ascii::AsciiExt;
 use std::io::Read;
 
 #[derive(Debug)]
+pub enum IR {
+    Sym(Instruction, usize),
+    CntSym(usize, Instruction, usize),
+    Eof
+}
+
+#[derive(Debug)]
 pub enum Instruction {
     MoveLeft,
     MoveRight,
@@ -38,11 +45,21 @@ impl ToInstruction for char {
     }
 }
 
-#[derive(Debug)]
-pub enum IR {
-    Sym(Instruction, usize),
-    CntSym(usize, Instruction, usize),
-    Eof
+impl Into<char> for Instruction {
+    fn into(self) -> char {
+        match self {
+            Instruction::IncCell => '+' ,
+            Instruction::DecCell => '-' ,
+            Instruction::LBrace => '[' ,
+            Instruction::RBrace => ']' ,
+            Instruction::Stdout => '.' ,
+            Instruction::Stdin => ',' ,
+            Instruction::MoveLeft => '<' ,
+            Instruction::MoveRight => '>',
+            Instruction::Zero => '|',
+            Instruction::Nop => '_'
+        }
+    }
 }
 
 pub struct BrainFuck {
@@ -183,26 +200,6 @@ pub fn parse_num_idx(s: &Vec<char>, ir_ptr: &mut usize) -> IR {
     }
 }
 
-// Run Length decoding
-// pub fn elr(encoded: &str) -> String {
-//         let en_chars = encoded.chars();
-//         let mut decoded = String::new();
-//         let mut peekable = en_chars.peekable();
-//         let mut ir_ptr = 0;
-//         loop {
-//             match parse_num_idx(&mut peekable, &mut ir_ptr) {
-//                     IR::Eof => break,
-//                     IR::CntSym(count, symbol, _) => {
-//                         for _ in 0..count {
-//                             decoded.push(symbol);
-//                         }
-//                     },
-//                     IR::Sym(symbol, _) => decoded.push(symbol)
-//             }
-//         }
-//         decoded
-// }
-
 pub fn rle(e: &str) -> String {
     if e.len() == 0 {
         e.to_string()
@@ -243,9 +240,9 @@ pub fn rle(e: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use engine::{process_parens, rle, optimize_zero_loop, parse_num, parse_num_idx};
+    use engine::{process_parens, optimize_zero_loop, parse_num_idx};
     use super::BrainFuck;
-    use cell::IR;
+    use super::IR;
     #[test]
     fn paren_idx() {
         let src = "++[.[-]]";
@@ -280,11 +277,13 @@ mod tests {
                 IR::Eof => break,
                 IR::CntSym(count,symbol, ptr) => {
                     ir_ptr = ptr;
-                    parsed.push_str(&format!("{}{}", count, symbol));
+                    let sym: char = symbol.into();
+                    parsed.push_str(&format!("{}{}", count, sym));
                     },
                 IR::Sym(symbol, ptr) => {
                     ir_ptr = ptr;
-                    parsed.push_str(&format!("{}", symbol));
+                    let sym: char = symbol.into();
+                    parsed.push_str(&format!("{}", sym));
                 }
             }
         }
